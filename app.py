@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, url_for, make_response
+from flask import Flask, render_template, request, url_for, make_response, flash, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///expenses.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False 
 db = SQLAlchemy(app)
 
@@ -21,12 +21,31 @@ class Expense(db.Model):
 with app.app_context():
     db.create_all()
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/add', methods=['POST'])
+@app.route("/add", methods=["POST"])
 def add():
+
+    description = (request.form.get("description") or "").strip()
+    amount_str = (request.form.get("amount") or "").strip()
+    category = (request.form.get("category") or "").strip()
+    date_str = (request.form.get("date") or "").strip()
+
+    if not description or not amount_str or not category or not date_str:
+        flash("Please fill in all fields", "error")
+
+    try:
+        amount = float(amount_str)
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        flash("Amount must be a positive number", "error")
+        return redirect(url_for("index"))
+        
+
+
     print("Form received:", dict(request.form) )
     return make_response("Form received check the console", 200)
 
