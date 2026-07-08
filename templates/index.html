@@ -164,11 +164,12 @@
             <tbody>
 
               {% if expenses %}
+              {% for expense in expenses %}
               <tr class="border-t border-slate-800 hover:bg-slate-800/30">
-                <td class="px-4 py-2">2025-09-25</td>
-                <td class="px-4 py-2">Groceries</td>
-                <td class="px-4 py-2">Food</td>
-                <td class="px-4 py-2 text-right">$25.00</td>
+                <td class="px-4 py-2">{{expense.date.strftime("%Y-%m-%d")}}</td>
+                <td class="px-4 py-2">{{expense.description}}</td>
+                <td class="px-4 py-2">{{expense.category}}</td>
+                <td class="px-4 py-2 text-right">${{'%.2f'|format(expense.amount)}}</td>
                 <td class="px-4 py-2 text-right">
                   <button
                     class="text-rose-300 hover:text-rose-200 text-xs border border-rose-400/30 px-3 py-1 rounded-lg"
@@ -177,7 +178,7 @@
                   </button>
                 </td>
               </tr>
-
+              {% endfor %}
               {% else %}
 
               <tr>
@@ -187,7 +188,7 @@
               </tr>
 
               {% endif %}
-              
+
             </tbody>
           </table>
         </div>
