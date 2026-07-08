@@ -162,6 +162,8 @@
               </tr>
             </thead>
             <tbody>
+
+              {% if expenses %}
               <tr class="border-t border-slate-800 hover:bg-slate-800/30">
                 <td class="px-4 py-2">2025-09-25</td>
                 <td class="px-4 py-2">Groceries</td>
@@ -175,11 +177,17 @@
                   </button>
                 </td>
               </tr>
+
+              {% else %}
+
               <tr>
                 <td colspan="5" class="px-4 py-6 text-center text-slate-400">
                   No expenses yet — add your first one above.
                 </td>
               </tr>
+
+              {% endif %}
+              
             </tbody>
           </table>
         </div>
