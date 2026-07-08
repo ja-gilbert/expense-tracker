@@ -1,22 +1,12 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard · Expense Tracker</title>
+{% extends "base.html" %}
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: { extend: { colors: { brand: { DEFAULT: "#38bdf8" } } } },
-      };
-    </script>
+{% block title %}Dashboard · Expense Tracker{% endblock %}
+
+{% block head_extra %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body class="h-full bg-slate-900 text-slate-100">
-    <main class="mx-auto max-w-6xl px-4 py-8">
+{% endblock %}
+
+{% block content %}
       <h1 class="text-3xl font-semibold mb-2">Dashboard</h1>
       <p class="text-slate-400 mb-6">
         Track spending, filter by date/category, and visualize instantly.
@@ -94,7 +84,7 @@
         <!-- Add Expense -->
         <section class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h2 class="text-lg font-semibold mb-3">Add Expense</h2>
-          <form method="post" action="{{url_for('add')}}"" class="space-y-3">
+          <form method="post" action="{{url_for('add')}}" class="space-y-3">
             <label class="block text-sm">
               <span class="mb-1 block text-slate-300">Description</span>
               <input
@@ -126,7 +116,7 @@
             </div>
             <label class="block text-sm">
               <span class="mb-1 block text-slate-300">Category</span>
-              <select
+              <select name="category"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               >
                 <option>Food</option>
@@ -206,6 +196,4 @@
           <canvas id="dayChart" height="140"></canvas>
         </div>
       </section>
-    </main>
-  </body>
-</html>
+{% endblock %}
