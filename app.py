@@ -36,7 +36,10 @@ with app.app_context():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+
+    expenses = Expense.query.order_by(Expense.date.desc(), Expense.id.desc()).all()
+    print(expenses)
+    return render_template("index.html", expenses=expenses)
 
 
 @app.route("/add", methods=["POST"])
