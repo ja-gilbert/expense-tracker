@@ -119,10 +119,12 @@
               <select name="category"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               >
+              {% for category in categories %}
                 <option>Food</option>
                 <option>Transport</option>
                 <option>Rent</option>
                 <option>Utilities</option>
+                {% endfor %}
               </select>
             </label>
             <button
@@ -141,7 +143,7 @@
         <span
           class="inline-block rounded-xl border border-slate-700 bg-slate-800 px-3 py-1 font-semibold"
         >
-          $0.00
+          ${{'%.2f'|format(total  or 0)}}
         </span>
       </div>
 
