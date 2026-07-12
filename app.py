@@ -62,6 +62,10 @@ def add():
         flash("Please fill in all fields", "error")
         return redirect(url_for("index"))
 
+    if category not in CATEGORIES:
+        flash("Please choose a valid category", "error")
+        return redirect(url_for("index"))
+
     try:
         amount = float(amount_str)
         if amount <= 0:
