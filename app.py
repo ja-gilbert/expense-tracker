@@ -51,6 +51,7 @@ def index():
     # Read query string parameters
     start_str = (request.args.get("start") or "").strip()
     end_str = (request.args.get("end") or "").strip()
+    selected_category = (request.args.get("category", "").strip() or None)
 
     # Parse dates
     start_date = parse_date_or_none(start_str)
@@ -68,6 +69,11 @@ def index():
     if end_date:
         query = query.filter(Expense.date <= end_date)
 
+    if selected_category:
+        query = query.filter(Expense.category == selected_category)
+    else:
+        query = query.filter(Expense.category.in_(CATEGORIES))
+
     expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
     total = sum(expense.amount for expense in expenses)
 
@@ -79,6 +85,7 @@ def index():
         total=total,
         start_str=start_str,
         end_str=end_str,
+        selected_category=selected_category,
         )
 
 
