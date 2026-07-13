@@ -35,18 +35,50 @@ with app.app_context():
 
 CATEGORIES = ["Food", "Transport", "Rent", "Utilities", "Health"]
 
+def parse_date_or_none(date_str: str):
+    if not date_str:
+        return None
+    try: 
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+
 
 @app.route("/")
 def index():
+    # Read query string parameters
+    start_str = (request.args.get("start") or "").strip()
+    end_str = (request.args.get("end") or "").strip()
 
-    expenses = Expense.query.order_by(Expense.date.desc(), Expense.id.desc()).all()
+    # Parse dates
+    start_date = parse_date_or_none(start_str)
+    end_date = parse_date_or_none(end_str)
+
+    if start_date and end_date and end_date < start_date:
+        flash("End date must be greater than start date", "error")
+        start_date = end_date = None
+        start_str = end_str = ""
+
+        # Query expenses
+    query = Expense.query
+    if start_date:
+        query = query.filter(Expense.date >= start_date)
+    if end_date:
+        query = query.filter(Expense.date <= end_date)
+
+    expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
     total = sum(expense.amount for expense in expenses)
 
     return render_template(
         "index.html", 
-        expenses=expenses,
         categories=CATEGORIES,
+        today=date.today().isoformat(),
+        expenses=expenses,
         total=total,
+        start_str=start_str,
+        end_str=end_str,
         )
 
 
