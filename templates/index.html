@@ -41,11 +41,12 @@
             <label class="text-sm md:col-span-2">
               <span class="block mb-1 text-slate-300">Category</span>
               <select
+                name="category"
                 class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
               >
                 <option value="">All</option>
                 {% for category in categories %}
-                <option>{{ category }}</option>
+                <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
                 {% endfor %}
               </select>
             </label>
@@ -112,7 +113,8 @@
               <label class="block text-sm">
                 <span class="mb-1 block text-slate-300">Date</span>
                 <input
-                  name="date"
+                  name=""
+                  value="{{today}}"
                   type="date"
                   class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100"
                 />
