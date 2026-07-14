@@ -78,6 +78,7 @@ def index():
     expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
     total = sum(expense.amount for expense in expenses)
 
+    # Get category data for the pie chart
     category_query = db.session.query(Expense.category, func.sum(Expense.amount))
 
     if start_date:
@@ -93,6 +94,22 @@ def index():
     category_labels = [category for category, _ in category_rows]
     category_values = [round(float(amount or 0), 2) for _, amount in category_rows]
 
+    # Get day data for the day chart
+
+    day_query = db.session.query(func.date(Expense.date), func.sum(Expense.amount))
+
+    if start_date:
+        day_query = day_query.filter(Expense.date >= start_date)
+    if end_date:
+        day_query = day_query.filter(Expense.date <= end_date)
+    if selected_category:
+        day_query = day_query.filter(Expense.category == selected_category)
+    
+    day_expr = func.date(Expense.date)
+    day_rows = day_query.group_by(day_expr).order_by(day_expr).all()
+    day_labels = [day for day, _ in day_rows]
+    day_values = [round(float(amount or 0), 2) for _, amount in day_rows]
+
     return render_template(
         "index.html",
         categories=CATEGORIES,
@@ -104,6 +121,8 @@ def index():
         selected_category=selected_category,
         category_labels=category_labels,
         category_values=category_values,
+        day_labels=day_labels,
+        day_values=day_values,
     )
 
 
