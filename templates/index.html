@@ -214,4 +214,20 @@
           <canvas id="dayChart" height="140"></canvas>
         </div>
       </section>
+
+      <script>
+
+        const catLabels = {{ (category_labels or []) |tojson }};
+        const catValues = {{ (category_values or []) |tojson }};
+
+        if (document.getElementById('catChart')) {
+          const catChart = document.getElementById('catChart').getContext('2d');
+
+          new Chart(catChart, {
+            type: 'pie',
+            data: {labels: catLabels, datasets: [{data: catValues}]},
+            options: {plugins: {legend: {labels: {color: '#cbd5e1'}}}}
+          });
+        }
+      </script>
 {% endblock %}
