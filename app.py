@@ -5,10 +5,13 @@ from flask import (
     url_for,
     flash,
     redirect,
+    Response,
 )
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime
 from sqlalchemy import func
+import csv
+import io
 
 
 app = Flask(__name__)
@@ -177,6 +180,54 @@ def delete(expense_id):
 
     print("Form received:", dict(request.form))
     return make_response("Form received check the console", 200)
+
+@app.route("/export.csv")
+def export_csv():
+
+    start_str = (request.args.get("start") or "").strip()
+    end_str = (request.args.get("end") or "").strip()
+    selected_category = request.args.get("category", "").strip() or None
+
+    start_date = parse_date_or_none(start_str)
+    end_date = parse_date_or_none(end_str)
+    
+    query = Expense.query
+
+    if start_date:
+        query = query.filter(Expense.date >= start_date)
+
+    if end_date:
+        query = query.filter(Expense.date <= end_date)
+
+    if selected_category:
+        query = query.filter(Expense.category == selected_category)
+
+    expenses = query.order_by(Expense.date, Expense.id).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["date", "description", "amount", "category"])
+
+    for expense in expenses:
+        writer.writerow([
+            expense.date.isoformat(),
+            expense.description,
+            f"{expense.amount:.2f}",
+            expense.category,
+        ])
+
+    file_start = start_str or "all"
+    file_end = end_str or "all"
+    filname = f"expenses_{file_start}_{file_end}.csv"
+
+    return Response(
+        output.getvalue(),
+        headers={
+            "Content-Type": "text/csv",
+            "Content-Disposition": f"attachment; filename={filname}"
+        },
+        mimetype="text/csv"
+    )
 
 
 if __name__ == "__main__":
