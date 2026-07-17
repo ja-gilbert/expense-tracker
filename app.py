@@ -178,8 +178,11 @@ def delete(expense_id):
     flash("Expense deleted", "success")
     return redirect(url_for("index"))
 
-    print("Form received:", dict(request.form))
-    return make_response("Form received check the console", 200)
+@app.route("/edit/<int:expense_id>", methods=["GET"])
+def edit(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+
+    return render_template("edit.html", expense=expense, categories=CATEGORIES, today=date.today().isoformat())
 
 @app.route("/export.csv")
 def export_csv():
