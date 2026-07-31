@@ -33,7 +33,9 @@ class Expense(db.Model):
     )  # Need description of the expense
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.Date, nullable=False, default=date.today())
+    # Pass the function, not a call: `date.today()` would be evaluated once at
+    # import and freeze every defaulted row to the day the process started.
+    date = db.Column(db.Date, nullable=False, default=date.today)
 
 
 with app.app_context():
