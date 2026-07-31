@@ -12,6 +12,7 @@ from datetime import date, datetime
 from sqlalchemy import func
 import csv
 import io
+import math
 
 
 app = Flask(__name__)
@@ -101,7 +102,11 @@ def parse_expense_form(form, strict_date):
 
     try:
         amount = float(values["amount"])
-        if amount <= 0:
+        # float() happily accepts "nan"/"inf"/"1e999", and both compare False
+        # against `<= 0`, so they slip past a bare positivity check: "inf" used
+        # to save and turn `total` and the chart values into inf, and "nan"
+        # blew up with an IntegrityError at commit time.
+        if not math.isfinite(amount) or amount <= 0:
             raise ValueError
     except ValueError:
         return values, None, None, "Amount must be a positive number"
