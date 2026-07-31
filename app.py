@@ -178,8 +178,83 @@ def delete(expense_id):
     flash("Expense deleted", "success")
     return redirect(url_for("index"))
 
-    print("Form received:", dict(request.form))
-    return make_response("Form received check the console", 200)
+def render_edit_form(expense, form):
+    """Render the edit form for `expense` with `form` supplying the field values."""
+    return render_template(
+        "edit.html",
+        expense=expense,
+        categories=CATEGORIES,
+        today=date.today().isoformat(),
+        form=form,
+    )
+
+
+@app.route("/edit/<int:expense_id>", methods=["GET"])
+def edit(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+
+    form = {
+        "description": expense.description,
+        "amount": f"{expense.amount:.2f}",
+        "category": expense.category,
+        "date": expense.date.isoformat() if expense.date else date.today().isoformat(),
+    }
+    return render_edit_form(expense, form)
+
+
+@app.route("/edit/<int:expense_id>", methods=["POST"])
+def edit_post(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+
+    description = (request.form.get("description") or "").strip()
+    amount_str = (request.form.get("amount") or "").strip()
+    category = (request.form.get("category") or "").strip()
+    date_str = (request.form.get("date") or "").strip()
+
+    error = None
+    amount = None
+    expense_date = None
+
+    if not description or not amount_str or not category or not date_str:
+        error = "Please fill in all fields"
+    elif category not in CATEGORIES:
+        error = "Please choose a valid category"
+    else:
+        try:
+            amount = float(amount_str)
+            if amount <= 0:
+                raise ValueError
+        except ValueError:
+            error = "Amount must be a positive number"
+
+        if error is None:
+            # Unlike /add, a bad date is an error here: silently rewriting the
+            # date of an existing expense would lose the user's real value.
+            expense_date = parse_date_or_none(date_str)
+            if expense_date is None:
+                error = "Please enter a valid date"
+
+    if error:
+        # Re-render with what was submitted so the user doesn't lose their edits.
+        flash(error, "error")
+        return render_edit_form(
+            expense,
+            {
+                "description": description,
+                "amount": amount_str,
+                "category": category,
+                "date": date_str,
+            },
+        )
+
+    expense.description = description
+    expense.amount = amount
+    expense.category = category
+    expense.date = expense_date
+    db.session.commit()
+
+    flash("Expense updated", "success")
+    return redirect(url_for("index"))
 
 @app.route("/export.csv")
 def export_csv():
