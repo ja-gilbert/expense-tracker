@@ -50,6 +50,71 @@ def parse_date_or_none(date_str: str):
         return None
 
 
+def apply_expense_filters(
+    query, start_date, end_date, selected_category, exclude_unknown_categories=False
+):
+    """Apply the shared start/end/category filters to `query`.
+
+    `exclude_unknown_categories` falls back to `Expense.category.in_(CATEGORIES)`
+    when no category was chosen, so rows with legacy/invalid categories drop out.
+    Only the dashboard's expense table currently does this — the two chart
+    queries and the CSV export do not, and that difference is preserved here
+    rather than quietly changed. See PLAN.md; making all four consistent is a
+    one-line change to this default.
+    """
+    if start_date:
+        query = query.filter(Expense.date >= start_date)
+    if end_date:
+        query = query.filter(Expense.date <= end_date)
+
+    if selected_category:
+        query = query.filter(Expense.category == selected_category)
+    elif exclude_unknown_categories:
+        query = query.filter(Expense.category.in_(CATEGORIES))
+
+    return query
+
+
+def parse_expense_form(form, strict_date):
+    """Read and validate the expense form fields shared by /add and /edit.
+
+    Returns `(values, amount, expense_date, error)`. `values` holds the raw
+    trimmed strings (so a caller can echo them back into the form) and `error`
+    is None when everything validated.
+
+    `strict_date` is the one place the two callers legitimately differ: /add
+    falls back to today on an unparseable date, while /edit treats it as an
+    error rather than silently rewriting a date the expense already has.
+    """
+    values = {
+        "description": (form.get("description") or "").strip(),
+        "amount": (form.get("amount") or "").strip(),
+        "category": (form.get("category") or "").strip(),
+        "date": (form.get("date") or "").strip(),
+    }
+
+    if not all(values.values()):
+        return values, None, None, "Please fill in all fields"
+
+    if values["category"] not in CATEGORIES:
+        return values, None, None, "Please choose a valid category"
+
+    try:
+        amount = float(values["amount"])
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        return values, None, None, "Amount must be a positive number"
+
+    expense_date = parse_date_or_none(values["date"])
+    if expense_date is None:
+        if strict_date:
+            return values, None, None, "Please enter a valid date"
+        expense_date = date.today()
+
+    return values, amount, expense_date, None
+
+
 @app.route("/")
 def index():
     # Read query string parameters
@@ -66,32 +131,25 @@ def index():
         start_date = end_date = None
         start_str = end_str = ""
 
-        # Query expenses
-    query = Expense.query
-    if start_date:
-        query = query.filter(Expense.date >= start_date)
-    if end_date:
-        query = query.filter(Expense.date <= end_date)
-
-    if selected_category:
-        query = query.filter(Expense.category == selected_category)
-    else:
-        query = query.filter(Expense.category.in_(CATEGORIES))
+    # Query expenses
+    query = apply_expense_filters(
+        Expense.query,
+        start_date,
+        end_date,
+        selected_category,
+        exclude_unknown_categories=True,
+    )
 
     expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
     total = sum(expense.amount for expense in expenses)
 
     # Get category data for the pie chart
-    category_query = db.session.query(Expense.category, func.sum(Expense.amount))
-
-    if start_date:
-        category_query = category_query.filter(Expense.date >= start_date)
-
-    if end_date:
-        category_query = category_query.filter(Expense.date <= end_date)
-
-    if selected_category:
-        category_query = category_query.filter(Expense.category == selected_category)
+    category_query = apply_expense_filters(
+        db.session.query(Expense.category, func.sum(Expense.amount)),
+        start_date,
+        end_date,
+        selected_category,
+    )
 
     category_rows = category_query.group_by(Expense.category).all()
     category_labels = [category for category, _ in category_rows]
@@ -99,15 +157,13 @@ def index():
 
     # Get day data for the day chart
 
-    day_query = db.session.query(func.date(Expense.date), func.sum(Expense.amount))
+    day_query = apply_expense_filters(
+        db.session.query(func.date(Expense.date), func.sum(Expense.amount)),
+        start_date,
+        end_date,
+        selected_category,
+    )
 
-    if start_date:
-        day_query = day_query.filter(Expense.date >= start_date)
-    if end_date:
-        day_query = day_query.filter(Expense.date <= end_date)
-    if selected_category:
-        day_query = day_query.filter(Expense.category == selected_category)
-    
     day_expr = func.date(Expense.date)
     day_rows = day_query.group_by(day_expr).order_by(day_expr).all()
     day_labels = [day for day, _ in day_rows]
@@ -132,36 +188,19 @@ def index():
 @app.route("/add", methods=["POST"])
 def add():
 
-    description = (request.form.get("description") or "").strip()
-    amount_str = (request.form.get("amount") or "").strip()
-    category = (request.form.get("category") or "").strip()
-    date_str = (request.form.get("date") or "").strip()
+    values, amount, expense_date, error = parse_expense_form(
+        request.form, strict_date=False
+    )
 
-    if not description or not amount_str or not category or not date_str:
-        flash("Please fill in all fields", "error")
+    if error:
+        flash(error, "error")
         return redirect(url_for("index"))
-
-    if category not in CATEGORIES:
-        flash("Please choose a valid category", "error")
-        return redirect(url_for("index"))
-
-    try:
-        amount = float(amount_str)
-        if amount <= 0:
-            raise ValueError
-    except ValueError:
-        flash("Amount must be a positive number", "error")
-        return redirect(url_for("index"))
-
-    try:
-        expense_date = (
-            datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
-        )  # Parse the date string into a date object
-    except ValueError:
-        expense_date = date.today()
 
     new_expense = Expense(
-        description=description, amount=amount, category=category, date=expense_date
+        description=values["description"],
+        amount=amount,
+        category=values["category"],
+        date=expense_date,
     )
     db.session.add(new_expense)
     db.session.commit()
@@ -206,50 +245,20 @@ def edit(expense_id):
 def edit_post(expense_id):
     expense = Expense.query.get_or_404(expense_id)
 
-    description = (request.form.get("description") or "").strip()
-    amount_str = (request.form.get("amount") or "").strip()
-    category = (request.form.get("category") or "").strip()
-    date_str = (request.form.get("date") or "").strip()
-
-    error = None
-    amount = None
-    expense_date = None
-
-    if not description or not amount_str or not category or not date_str:
-        error = "Please fill in all fields"
-    elif category not in CATEGORIES:
-        error = "Please choose a valid category"
-    else:
-        try:
-            amount = float(amount_str)
-            if amount <= 0:
-                raise ValueError
-        except ValueError:
-            error = "Amount must be a positive number"
-
-        if error is None:
-            # Unlike /add, a bad date is an error here: silently rewriting the
-            # date of an existing expense would lose the user's real value.
-            expense_date = parse_date_or_none(date_str)
-            if expense_date is None:
-                error = "Please enter a valid date"
+    # strict_date=True: a bad date is an error here rather than a silent
+    # fallback to today, which would lose the date the expense already has.
+    values, amount, expense_date, error = parse_expense_form(
+        request.form, strict_date=True
+    )
 
     if error:
         # Re-render with what was submitted so the user doesn't lose their edits.
         flash(error, "error")
-        return render_edit_form(
-            expense,
-            {
-                "description": description,
-                "amount": amount_str,
-                "category": category,
-                "date": date_str,
-            },
-        )
+        return render_edit_form(expense, values)
 
-    expense.description = description
+    expense.description = values["description"]
     expense.amount = amount
-    expense.category = category
+    expense.category = values["category"]
     expense.date = expense_date
     db.session.commit()
 
@@ -265,17 +274,10 @@ def export_csv():
 
     start_date = parse_date_or_none(start_str)
     end_date = parse_date_or_none(end_str)
-    
-    query = Expense.query
 
-    if start_date:
-        query = query.filter(Expense.date >= start_date)
-
-    if end_date:
-        query = query.filter(Expense.date <= end_date)
-
-    if selected_category:
-        query = query.filter(Expense.category == selected_category)
+    query = apply_expense_filters(
+        Expense.query, start_date, end_date, selected_category
+    )
 
     expenses = query.order_by(Expense.date, Expense.id).all()
 
