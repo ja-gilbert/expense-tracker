@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup B — Refined dark · Expense Tracker</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Shared primitives for the three mockups.
+   Everything is driven by CSS custom properties, so a theme is ~20 values.
+   Maps 1:1 onto a Tailwind theme.extend.colors config — see DIRECTION.md.
+   ───────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.45;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+
+.tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.ink2 { color: var(--ink2); }
+.row { display: flex; align-items: center; }
+.gap-1 { gap: 4px } .gap-2 { gap: 8px } .gap-3 { gap: 12px } .gap-4 { gap: 16px }
+.grow { flex: 1 } .push { margin-left: auto }
+
+/* ── card ─────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card-hd { padding: 18px 20px 0; }
+.card-bd { padding: 16px 20px 20px; }
+.card-ttl { font-size: 14px; font-weight: 600; }
+.card-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+/* ── buttons & chips ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: calc(var(--radius) - 4px);
+  border: 1px solid var(--hair); background: var(--surface);
+  padding: 7px 12px; font-size: 13px; color: var(--ink2);
+  transition: background .12s, border-color .12s, color .12s;
+}
+.btn:hover { background: var(--hover); color: var(--ink); }
+.btn-primary { background: var(--s1); border-color: var(--s1); color: #fff; font-weight: 500; }
+.btn-primary:hover { background: var(--s1-hover); border-color: var(--s1-hover); color: #fff; }
+.btn-sm { padding: 4px 9px; font-size: 12px; }
+.kbd {
+  font: 500 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border-radius: 4px; padding: 1px 4px; background: var(--kbd-bg); color: var(--kbd-fg);
+  border: 1px solid var(--kbd-br);
+}
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--well); border: 1px solid var(--hair); border-radius: calc(var(--radius) - 2px); }
+.seg > button { padding: 5px 11px; font-size: 13px; border-radius: calc(var(--radius) - 6px); color: var(--ink2); }
+.seg > button:hover { color: var(--ink); }
+.seg > button[aria-pressed="true"] { background: var(--s1); color: #fff; font-weight: 500; }
+.chip {
+  border: 1px solid var(--hair); background: var(--surface); color: var(--ink2);
+  border-radius: 999px; padding: 5px 11px; font-size: 12.5px;
+}
+.chip:hover { background: var(--hover); color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--s1); border-color: var(--s1); color: #fff; font-weight: 500; }
+.tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  border: 1px solid var(--hair); border-radius: 4px; padding: 1px 5px; color: var(--muted);
+  background: var(--well); white-space: nowrap;
+}
+
+/* ── fields ───────────────────────────────────────────────────────────── */
+.field {
+  width: 100%; background: var(--field); border: 1px solid var(--hair);
+  border-radius: calc(var(--radius) - 4px); padding: 8px 11px; font-size: 13px;
+  outline: none; transition: border-color .12s, box-shadow .12s;
+}
+.field::placeholder { color: var(--muted); }
+.field:focus { border-color: var(--s1); box-shadow: 0 0 0 3px var(--s1-ring); }
+label.lbl { display: block; font-size: 12px; color: var(--ink2); margin-bottom: 5px; }
+
+/* ── figures ──────────────────────────────────────────────────────────── */
+.hero { font-size: 52px; line-height: 1; font-weight: 600; letter-spacing: -0.025em; }
+.stat { font-size: 28px; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; }
+.delta { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 8px; font-size: 12.5px; font-weight: 500; }
+.delta.up   { background: var(--crit-bg); color: var(--crit-fg); }   /* spending up = bad */
+.delta.down { background: var(--good-bg); color: var(--good-fg); }
+
+/* ── meter ────────────────────────────────────────────────────────────── */
+.meter { height: 8px; border-radius: 999px; overflow: hidden; background: var(--track); }
+.meter > i { display: block; height: 100%; border-radius: 999px; background: var(--s1); }
+
+/* ── table ────────────────────────────────────────────────────────────── */
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl thead th {
+  text-align: left; font-weight: 500; font-size: 11.5px; color: var(--muted);
+  padding: 9px 20px; border-bottom: 1px solid var(--hair); white-space: nowrap;
+}
+.tbl tbody td { padding: 10px 20px; border-bottom: 1px solid var(--hair-soft); }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover { background: var(--hover); }
+.tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.rowacts { opacity: 0; transition: opacity .12s; display: inline-flex; gap: 6px; }
+.tbl tbody tr:hover .rowacts { opacity: 1; }
+.cdot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+
+/* ── viz ──────────────────────────────────────────────────────────────── */
+.viz-root { position: relative; }
+.viz-svg { display: block; overflow: visible; }
+.viz-tip {
+  position: absolute; pointer-events: none; opacity: 0; transition: opacity .1s;
+  background: var(--tip-bg); color: var(--tip-fg); border: 1px solid var(--tip-br);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; min-width: 150px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.16); z-index: 5;
+}
+.viz-tip-h { font-weight: 600; margin-bottom: 5px; }
+.viz-tip-r { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.viz-tip-r b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.viz-sw { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink2); }
+.legend span.k { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
+
+/* ── misc ─────────────────────────────────────────────────────────────── */
+.mock-badge {
+  position: fixed; left: 14px; bottom: 14px; z-index: 60; font-size: 11px;
+  background: var(--ink); color: var(--surface); padding: 6px 11px; border-radius: 8px; opacity: .82;
+}
+details.twin { font-size: 13px; }
+details.twin > summary { cursor: pointer; color: var(--ink2); font-weight: 500; list-style: none; }
+details.twin > summary::before { content: "▸ "; }
+details.twin[open] > summary::before { content: "▾ "; }
+::-webkit-scrollbar { width: 9px; height: 9px }
+::-webkit-scrollbar-thumb { background: var(--hair); border-radius: 5px }
+::-webkit-scrollbar-track { background: transparent }
+
+</style>
+<script>
+// Fake data shared by all three mockups. Mirrors the real schema:
+// Expense(id, description, amount, category, date) with CATEGORIES from app.py.
+window.DEMO = (function () {
+  const CATEGORIES = ["Food", "Transport", "Rent", "Utilities", "Health"];
+
+  // 30 days ending 2026-08-07
+  const days = [];
+  const d0 = new Date(Date.UTC(2026, 6, 9));
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(d0.getTime() + i * 86400000);
+    days.push(d.toISOString().slice(0, 10));
+  }
+
+  // daily totals (this period) — rent lands on day 23
+  const dailyThis = [
+    18.4, 42.1, 0, 63.8, 27.5, 9.25, 88.0, 12.6, 0, 34.9,
+    56.2, 21.0, 0, 74.3, 19.8, 0, 46.5, 31.2, 8.75, 62.0,
+    15.4, 0, 1450, 38.9, 24.6, 11.3, 57.8, 0, 29.4, 43.15
+  ];
+  const dailyPrev = [
+    22.0, 15.6, 8.4, 51.2, 33.0, 0, 71.5, 19.9, 26.4, 0,
+    44.8, 12.1, 37.6, 68.0, 0, 23.5, 55.0, 9.8, 41.2, 0,
+    17.6, 30.4, 1450, 26.8, 0, 48.5, 13.9, 35.0, 21.7, 52.3
+  ];
+
+  const cum = (a) => a.reduce((acc, v) => (acc.push((acc.at(-1) || 0) + v), acc), []);
+  // Rent (day 23) is 56% of the period and flattens every trend line it appears
+  // in. Real trackers separate fixed/recurring from variable spend — so does this.
+  const strip = (a) => a.map((v, i) => (i === 22 ? 0 : v));
+  const dailyThisVar = strip(dailyThis), dailyPrevVar = strip(dailyPrev);
+
+  const categories = [
+    { name: "Rent",      spent: 1450.00, budget: 1450, txns: 1  },
+    { name: "Food",      spent:  612.40, budget:  700, txns: 24 },
+    { name: "Utilities", spent:  236.80, budget:  220, txns: 4  },
+    { name: "Transport", spent:  188.25, budget:  250, txns: 11 },
+    { name: "Health",    spent:   95.00, budget:  150, txns: 2  },
+  ];
+
+  const expenses = [
+    { id: 41, date: "2026-08-07", description: "Trader Joe's",        amount: 43.15, category: "Food",      recurring: false },
+    { id: 40, date: "2026-08-06", description: "Metro card top-up",   amount: 29.40, category: "Transport", recurring: false },
+    { id: 39, date: "2026-08-04", description: "Internet — Verizon",  amount: 57.80, category: "Utilities", recurring: true  },
+    { id: 38, date: "2026-08-03", description: "Pharmacy",            amount: 11.30, category: "Health",    recurring: false },
+    { id: 37, date: "2026-08-02", description: "Coffee + pastry",     amount: 24.60, category: "Food",      recurring: false },
+    { id: 36, date: "2026-08-01", description: "Gym membership",      amount: 38.90, category: "Health",    recurring: true  },
+    { id: 35, date: "2026-07-31", description: "Rent — August",       amount: 1450.00, category: "Rent",    recurring: true  },
+    { id: 34, date: "2026-07-29", description: "Whole Foods",         amount: 15.40, category: "Food",      recurring: false },
+    { id: 33, date: "2026-07-28", description: "Electric — ConEd",    amount: 62.00, category: "Utilities", recurring: true  },
+    { id: 32, date: "2026-07-27", description: "Uber to airport",     amount:  8.75, category: "Transport", recurring: false },
+    { id: 31, date: "2026-07-26", description: "Ramen",               amount: 31.20, category: "Food",      recurring: false },
+    { id: 30, date: "2026-07-25", description: "Gas",                 amount: 46.50, category: "Transport", recurring: false },
+  ];
+
+  const total = categories.reduce((s, c) => s + c.spent, 0);
+  const budget = categories.reduce((s, c) => s + c.budget, 0);
+  const prevTotal = dailyPrev.reduce((s, v) => s + v, 0);
+
+  return {
+    CATEGORIES, days, dailyThis, dailyPrev, dailyThisVar, dailyPrevVar,
+    cumThis: cum(dailyThis), cumPrev: cum(dailyPrev),
+    cumThisVar: cum(dailyThisVar), cumPrevVar: cum(dailyPrevVar),
+    varTotal: dailyThisVar.reduce((s, v) => s + v, 0),
+    varPrevTotal: dailyPrevVar.reduce((s, v) => s + v, 0),
+    categories, expenses,
+    total, budget, prevTotal,
+    delta: (total - prevTotal) / prevTotal,
+    dailyAvg: total / 30,
+    money: (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    money0: (n) => "$" + Math.round(n).toLocaleString("en-US"),
+  };
+})();
+
+</script>
+<script>
+/* Tiny SVG chart lib for the mockups.
+   Implements the mark specs directly: 2px lines, >=8px markers with a 2px
+   surface ring, <=24px bars with a 4px rounded data-end, hairline solid
+   gridlines, 10%-opacity area washes, crosshair + tooltip on every plot.
+   Colors come from CSS custom properties on the nearest .viz-root. */
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const V = (node, name) => getComputedStyle(node).getPropertyValue(name).trim();
+
+  function tooltipFor(host) {
+    let t = host.querySelector(".viz-tip");
+    if (!t) { t = document.createElement("div"); t.className = "viz-tip"; host.appendChild(t); }
+    return t;
+  }
+
+  /* ---------------- line / area chart ---------------- */
+  function lineChart(host, opt) {
+    const W = host.clientWidth || 640, H = opt.height || 250;
+    const pad = { t: 12, r: opt.padRight ?? 44, b: 26, l: opt.padLeft ?? 52 };
+    const labels = opt.labels, series = opt.series;
+    const all = series.flatMap(s => s.data);
+    const min = 0;
+    // round the axis to clean numbers rather than data-max × padding
+    const niceMax = (raw, ticks) => {
+      const rough = raw / ticks, mag = Math.pow(10, Math.floor(Math.log10(rough)));
+      const step = [1, 2, 2.5, 4, 5, 10].map(m => m * mag).find(s => s >= rough) || 10 * mag;
+      return step * ticks;
+    };
+    const max = opt.max ?? niceMax(Math.max(...all) * 1.04, opt.yTicks || 4);
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const x = i => pad.l + (labels.length === 1 ? iw / 2 : (i / (labels.length - 1)) * iw);
+    const y = v => pad.t + ih - ((v - min) / (max - min)) * ih;
+
+    host.innerHTML = "";
+    const svg = el("svg", { width: "100%", height: H, viewBox: `0 0 ${W} ${H}`, class: "viz-svg" });
+    const grid = V(host, "--viz-grid"), axis = V(host, "--viz-axis"), muted = V(host, "--viz-muted"), surf = V(host, "--viz-surface");
+
+    // y gridlines (solid hairlines, recessive)
+    const ticks = opt.yTicks || 4;
+    for (let i = 0; i <= ticks; i++) {
+      const v = min + (i / ticks) * (max - min), yy = y(v);
+      svg.appendChild(el("line", { x1: pad.l, x2: W - pad.r, y1: yy, y2: yy, stroke: grid, "stroke-width": 1 }));
+      const tx = el("text", { x: pad.l - 8, y: yy + 3.5, fill: muted, "font-size": 11, "text-anchor": "end", class: "tnum" });
+      tx.textContent = (opt.yFmt || (n => n))(v);
+      svg.appendChild(tx);
+    }
+    // baseline
+    svg.appendChild(el("line", { x1: pad.l, x2: W - pad.r, y1: y(min), y2: y(min), stroke: axis, "stroke-width": 1 }));
+
+    // x tick labels (thinned)
+    const step = Math.ceil(labels.length / (opt.xTicks || 7));
+    labels.forEach((l, i) => {
+      if (i % step && i !== labels.length - 1) return;
+      const tx = el("text", { x: x(i), y: H - 8, fill: muted, "font-size": 11, "text-anchor": "middle" });
+      tx.textContent = l; svg.appendChild(tx);
+    });
+
+    // series
+    series.forEach(s => {
+      const pts = s.data.map((v, i) => [x(i), y(v)]);
+      const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+      if (s.fill) {
+        svg.appendChild(el("path", {
+          d: d + ` L${pts.at(-1)[0].toFixed(1)} ${y(min)} L${pts[0][0].toFixed(1)} ${y(min)} Z`,
+          fill: s.color, "fill-opacity": 0.10,
+        }));
+      }
+      svg.appendChild(el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+      // end marker with 2px surface ring
+      const last = pts.at(-1);
+      svg.appendChild(el("circle", { cx: last[0], cy: last[1], r: 4.5, fill: s.color, stroke: surf, "stroke-width": 2 }));
+      // selective direct label: the endpoint of the primary series only
+      if (s.endLabel) {
+        const tx = el("text", { x: Math.min(last[0] + 9, W - 4), y: last[1] + 4, fill: V(host, "--viz-ink"), "font-size": 11, "font-weight": 600, "text-anchor": "start" });
+        tx.textContent = s.endLabel; svg.appendChild(tx);
+      }
+    });
+
+    // crosshair + hover
+    const cross = el("line", { x1: 0, x2: 0, y1: pad.t, y2: pad.t + ih, stroke: axis, "stroke-width": 1, opacity: 0 });
+    svg.appendChild(cross);
+    const dots = series.map(s => { const c = el("circle", { r: 4.5, fill: s.color, stroke: surf, "stroke-width": 2, opacity: 0 }); svg.appendChild(c); return c; });
+    host.appendChild(svg);
+    const tip = tooltipFor(host);
+
+    svg.addEventListener("mousemove", ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) * (W / r.width);
+      let i = Math.round(((px - pad.l) / iw) * (labels.length - 1));
+      i = Math.max(0, Math.min(labels.length - 1, i));
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+      dots.forEach((c, k) => { c.setAttribute("cx", x(i)); c.setAttribute("cy", y(series[k].data[i])); c.setAttribute("opacity", 1); });
+      tip.innerHTML = `<div class="viz-tip-h">${opt.tipTitle ? opt.tipTitle(i) : labels[i]}</div>` +
+        series.map((s, k) => `<div class="viz-tip-r"><span class="viz-sw" style="background:${s.color}"></span>${s.name}<b>${(opt.yFmt2 || opt.yFmt || (n => n))(s.data[i])}</b></div>`).join("");
+      tip.style.opacity = 1;
+      const left = (x(i) / W) * r.width;
+      tip.style.left = Math.max(4, Math.min(r.width - tip.offsetWidth - 4, left - tip.offsetWidth / 2)) + "px";
+      tip.style.top = "4px";
+    });
+    svg.addEventListener("mouseleave", () => { cross.setAttribute("opacity", 0); dots.forEach(c => c.setAttribute("opacity", 0)); tip.style.opacity = 0; });
+  }
+
+  /* ---------------- horizontal ranked bars (one series, one color) ------- */
+  function barsH(host, opt) {
+    const rows = opt.rows, W = host.clientWidth || 420;
+    const labelW = opt.labelW ?? 74, valueW = opt.valueW ?? 76;
+    const rowH = opt.rowH ?? 30, barH = Math.min(18, rowH - 12);
+    const H = rows.length * rowH + 4;
+    const max = Math.max(...rows.map(r => r.value));
+    const iw = W - labelW - valueW;
+    host.innerHTML = "";
+    const svg = el("svg", { width: "100%", height: H, viewBox: `0 0 ${W} ${H}`, class: "viz-svg" });
+    const ink2 = V(host, "--viz-ink2"), ink = V(host, "--viz-ink");
+    rows.forEach((r, i) => {
+      const yTop = i * rowH + 6, w = Math.max(3, (r.value / max) * iw);
+      const lb = el("text", { x: 0, y: yTop + barH / 2 + 4, fill: ink2, "font-size": 12 });
+      lb.textContent = r.label; svg.appendChild(lb);
+      // 4px rounded data-end, square at the baseline
+      const rx = 4, x0 = labelW;
+      svg.appendChild(el("path", {
+        d: `M${x0} ${yTop} H${x0 + w - rx} a${rx} ${rx} 0 0 1 ${rx} ${rx} V${yTop + barH - rx} a${rx} ${rx} 0 0 1 -${rx} ${rx} H${x0} Z`,
+        fill: r.color || V(host, "--viz-s1"),
+      }));
+      const vl = el("text", { x: W, y: yTop + barH / 2 + 4, fill: ink, "font-size": 12, "font-weight": 600, "text-anchor": "end", class: "tnum" });
+      vl.textContent = r.display; svg.appendChild(vl);
+    });
+    host.appendChild(svg);
+  }
+
+  /* ---------------- sparkline ---------------- */
+  function spark(host, values, color, fill) {
+    const W = host.clientWidth || 160, H = host.dataset.h ? +host.dataset.h : 34;
+    const max = Math.max(...values), min = Math.min(...values);
+    const x = i => (i / (values.length - 1)) * (W - 2) + 1;
+    const y = v => H - 2 - ((v - min) / (max - min || 1)) * (H - 4);
+    const d = values.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+    host.innerHTML = "";
+    const svg = el("svg", { width: "100%", height: H, viewBox: `0 0 ${W} ${H}`, class: "viz-svg" });
+    if (fill) svg.appendChild(el("path", { d: d + ` L${x(values.length - 1)} ${H} L${x(0)} ${H} Z`, fill: color, "fill-opacity": 0.10 }));
+    svg.appendChild(el("path", { d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+    svg.appendChild(el("circle", { cx: x(values.length - 1), cy: y(values.at(-1)), r: 3.5, fill: color, stroke: V(host, "--viz-surface"), "stroke-width": 2 }));
+    host.appendChild(svg);
+  }
+
+  /* ---------------- grouped columns (2 series) ---------------- */
+  function colsGrouped(host, opt) {
+    const W = host.clientWidth || 560, H = opt.height || 200;
+    const pad = { t: 10, r: 8, b: 24, l: 48 };
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const groups = opt.groups, series = opt.series;
+    const rawMax = Math.max(...series.flatMap(s => s.data)) * 1.04;
+    const rough = rawMax / 4, mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const max = ([1, 2, 2.5, 4, 5, 10].map(m => m * mag).find(s => s >= rough) || 10 * mag) * 4;
+    const band = iw / groups.length;
+    const gap = 2; // 2px surface gap between adjacent bars
+    const bw = Math.min(20, (band * 0.62 - gap) / series.length);
+    const y = v => pad.t + ih - (v / max) * ih;
+    host.innerHTML = "";
+    const svg = el("svg", { width: "100%", height: H, viewBox: `0 0 ${W} ${H}`, class: "viz-svg" });
+    const grid = V(host, "--viz-grid"), axis = V(host, "--viz-axis"), muted = V(host, "--viz-muted");
+    for (let i = 0; i <= 4; i++) {
+      const v = (i / 4) * max, yy = y(v);
+      svg.appendChild(el("line", { x1: pad.l, x2: W - pad.r, y1: yy, y2: yy, stroke: grid, "stroke-width": 1 }));
+      const tx = el("text", { x: pad.l - 8, y: yy + 3.5, fill: muted, "font-size": 11, "text-anchor": "end", class: "tnum" });
+      tx.textContent = (opt.yFmt || (n => n))(v); svg.appendChild(tx);
+    }
+    svg.appendChild(el("line", { x1: pad.l, x2: W - pad.r, y1: y(0), y2: y(0), stroke: axis, "stroke-width": 1 }));
+    groups.forEach((g, gi) => {
+      const groupW = bw * series.length + gap * (series.length - 1);
+      const x0 = pad.l + band * gi + (band - groupW) / 2;
+      series.forEach((s, si) => {
+        const v = s.data[gi], h = Math.max(2, (v / max) * ih), xx = x0 + si * (bw + gap), yy = y(v), rx = 4;
+        svg.appendChild(el("path", {
+          d: `M${xx} ${yy + rx} a${rx} ${rx} 0 0 1 ${rx} -${rx} H${xx + bw - rx} a${rx} ${rx} 0 0 1 ${rx} ${rx} V${yy + h} H${xx} Z`,
+          fill: s.color,
+        }));
+      });
+      const tx = el("text", { x: pad.l + band * gi + band / 2, y: H - 7, fill: muted, "font-size": 11, "text-anchor": "middle" });
+      tx.textContent = g; svg.appendChild(tx);
+    });
+    host.appendChild(svg);
+    const tip = tooltipFor(host);
+    svg.addEventListener("mousemove", ev => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) * (W / r.width);
+      let gi = Math.floor((px - pad.l) / band); gi = Math.max(0, Math.min(groups.length - 1, gi));
+      tip.innerHTML = `<div class="viz-tip-h">${groups[gi]}</div>` + series.map(s =>
+        `<div class="viz-tip-r"><span class="viz-sw" style="background:${s.color}"></span>${s.name}<b>${(opt.yFmt2 || opt.yFmt)(s.data[gi])}</b></div>`).join("");
+      tip.style.opacity = 1;
+      const left = ((pad.l + band * gi + band / 2) / W) * r.width;
+      tip.style.left = Math.max(4, Math.min(r.width - tip.offsetWidth - 4, left - tip.offsetWidth / 2)) + "px";
+      tip.style.top = "4px";
+    });
+    svg.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
+  }
+
+  window.VIZ = { lineChart, barsH, spark, colsGrouped };
+})();
+
+</script>
+</head>
+<body>
+<style>
+:root {
+  --page:#0c0e13; --surface:#14171f; --well:#1a1e28; --field:#1a1e28; --hover:#1c202b;
+  --ink:#f2f3f5; --ink2:#a9b0bd; --muted:#7a8291;
+  --hair:#242935; --hair-soft:#1e222c; --track:#1d3355;
+  --s1:#3987e5; --s1-hover:#4d95ea; --s1-ring:rgba(57,135,229,.28); --s1-soft:rgba(57,135,229,.14);
+  --s2:#d95926;
+  --good-bg:rgba(12,163,12,.14); --good-fg:#5fd15f; --crit-bg:rgba(208,59,59,.15); --crit-fg:#f08585;
+  --warn:#fab219; --crit:#d03b3b;
+  --tip-bg:#20252f; --tip-fg:#f2f3f5; --tip-br:#333a48;
+  --kbd-bg:rgba(255,255,255,.16); --kbd-fg:#fff; --kbd-br:rgba(255,255,255,.22);
+  --radius:14px; --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 1px 2px rgba(0,0,0,.4);
+  --viz-surface:#14171f; --viz-grid:#20242e; --viz-axis:#343a47; --viz-muted:#7a8291;
+  --viz-ink:#f2f3f5; --viz-ink2:#a9b0bd; --viz-s1:#3987e5; --viz-s2:#d95926;
+  color-scheme: dark;
+}
+body { background:
+  radial-gradient(900px 420px at 12% -8%, rgba(57,135,229,.10), transparent 62%),
+  radial-gradient(760px 380px at 92% -4%, rgba(217,89,38,.07), transparent 60%),
+  var(--page); background-attachment: fixed; }
+.shell { display:grid; grid-template-columns: 216px 1fr; min-height:100vh; position:relative; }
+.shell::before { content:""; position:absolute; left:0; top:0; bottom:0; width:216px;
+  background: color-mix(in srgb, var(--surface) 55%, transparent); border-right:1px solid var(--hair); }
+aside { padding:18px 14px; position:sticky; top:0; height:100vh; z-index:1; }
+.brand { display:flex; align-items:center; gap:9px; font-weight:600; letter-spacing:-.02em; font-size:15px; padding:0 8px 18px; }
+.brand .mk { width:26px; height:26px; border-radius:8px; background:linear-gradient(160deg,#3987e5,#1c5cab); color:#fff; display:grid; place-items:center; font-size:13px; font-weight:700; }
+.side a { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; color:var(--ink2); font-size:13px; }
+.side a:hover { background:var(--hover); color:var(--ink); }
+.side a.on { background:var(--s1-soft); color:#8bbdf5; font-weight:500; }
+.side a svg { width:15px; height:15px; opacity:.85 }
+.side .sec { font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); padding:16px 10px 6px; }
+.sideftr { position:absolute; bottom:16px; left:14px; right:14px; }
+.content { min-width:0; }
+header.top { position:sticky; top:0; z-index:30; height:58px; display:flex; align-items:center; gap:12px;
+  padding:0 26px; border-bottom:1px solid var(--hair);
+  background: color-mix(in srgb, var(--page) 78%, transparent); backdrop-filter: blur(12px); }
+.search { position:relative; }
+.search .field { width:250px; padding-left:32px; }
+.search svg { position:absolute; left:10px; top:9px; width:15px; height:15px; color:var(--muted); }
+main { padding:22px 26px 60px; }
+.stack > * + * { margin-top:16px; }
+.grid { display:grid; gap:16px; }
+.g12 { grid-template-columns:repeat(12,1fr); }
+.filterbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.vr { width:1px; height:22px; background:var(--hair); margin:0 4px; }
+.kpi { padding:16px 18px; display:flex; flex-direction:column; gap:2px; position:relative; overflow:hidden; }
+.kpi .lab { font-size:12.5px; color:var(--ink2); }
+.kpi .val { font-size:26px; font-weight:600; letter-spacing:-.02em; margin-top:4px; }
+.kpi .sub { font-size:11.5px; color:var(--muted); }
+.hero-card { padding:22px 24px; display:flex; flex-direction:column; background:
+  linear-gradient(150deg, rgba(57,135,229,.13), transparent 58%), var(--surface); }
+.split { border-top:1px solid var(--hair); margin-top:20px; padding-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.qadd { padding:12px 20px; background:var(--s1-soft); border-bottom:1px solid var(--hair); }
+.qadd form { display:grid; grid-template-columns:4fr 2fr 2fr 2fr 1.6fr; gap:8px; }
+.budgetrow + .budgetrow { margin-top:14px; }
+.bmeta { display:flex; align-items:baseline; justify-content:space-between; font-size:13px; }
+@media (max-width:1100px){ .shell{grid-template-columns:1fr} aside{display:none} .g12>*{grid-column:span 12 !important} }
+</style>
+
+<div class="mock-badge">Mockup B — “Refined dark” · static demo data</div>
+
+<div class="shell">
+  <aside>
+    <div class="brand"><span class="mk">L</span>Ledger</div>
+    <nav class="side">
+      <a class="on" href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.8" y="1.8" width="5" height="5" rx="1.2"/><rect x="9.2" y="1.8" width="5" height="5" rx="1.2"/><rect x="1.8" y="9.2" width="5" height="5" rx="1.2"/><rect x="9.2" y="9.2" width="5" height="5" rx="1.2"/></svg>Dashboard</a>
+      <a href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></svg>Expenses</a>
+      <a href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 4.4v3.6l2.4 1.6"/></svg>Budgets</a>
+      <a href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 13V7M6.8 13V3.5M11.2 13V9M15 13H1"/></svg>Reports</a>
+      <div class="sec">Views</div>
+      <a href="#"><span style="width:15px;text-align:center">◆</span>This month</a>
+      <a href="#"><span style="width:15px;text-align:center">◆</span>Over budget</a>
+      <a href="#"><span style="width:15px;text-align:center">◆</span>Recurring</a>
+      <a href="#" style="color:var(--muted)"><span style="width:15px;text-align:center">+</span>New view</a>
+    </nav>
+    <div class="sideftr">
+      <div class="card" style="padding:12px 13px; background:var(--well)">
+        <div style="font-size:12px; font-weight:500">August budget</div>
+        <div class="meter" style="margin:8px 0 6px; height:6px"><i id="sideBar"></i></div>
+        <div class="muted" style="font-size:11px" id="sideTxt"></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="top">
+      <div style="font-weight:600; letter-spacing:-.01em">Dashboard</div>
+      <span class="tag">Jul 9 – Aug 7</span>
+      <div class="push row gap-2">
+        <div class="search">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 18 18"/></svg>
+          <input class="field" placeholder="Search…  ⌘K" />
+        </div>
+        <button class="btn">Export CSV</button>
+        <button class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 4.5v11M4.5 10h11"/></svg>
+          Add expense <span class="kbd">N</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="stack">
+      <div class="filterbar">
+        <div class="seg"><button>7d</button><button aria-pressed="true">30d</button><button>90d</button><button>MTD</button><button>Custom…</button></div>
+        <div class="vr"></div>
+        <div class="row gap-1" id="chips" style="flex-wrap:wrap"></div>
+      </div>
+
+      <div class="grid g12">
+        <div class="card hero-card" style="grid-column:span 5">
+          <div class="ink2" style="font-size:13px">Spent in the last 30 days</div>
+          <div class="hero" id="heroTotal" style="margin-top:6px"></div>
+          <div class="row gap-2" style="margin-top:12px">
+            <span class="delta up" id="heroDelta"></span>
+            <span class="muted" style="font-size:12.5px">vs previous 30 days</span>
+          </div>
+          <div class="split">
+            <div>
+              <div class="muted" style="font-size:12px">Budget used</div>
+              <div class="row" style="gap:6px; align-items:baseline; margin-top:4px">
+                <span class="stat tnum" id="budgetPct"></span>
+                <span class="muted tnum" style="font-size:12px" id="budgetOf"></span>
+              </div>
+              <div class="meter" style="margin-top:9px; height:6px"><i id="budgetBar"></i></div>
+            </div>
+            <div>
+              <div class="muted" style="font-size:12px">Projected month end</div>
+              <div class="stat" style="margin-top:4px">$2,712</div>
+              <div class="row gap-1" style="margin-top:9px; font-size:12px; color:var(--good-fg)">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7"/><path d="m5 8.2 2 2 4-4.2" stroke="#14171f" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                $58 under your $2,770 cap
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:auto; padding-top:20px">
+            <div class="row" style="justify-content:space-between; font-size:12px">
+              <span class="muted">Daily spend, last 30 days</span>
+              <span class="muted tnum">peak $88 · Jul 15</span>
+            </div>
+            <div class="viz-root" data-h="52" id="heroSpark" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <div style="grid-column:span 7" class="grid" >
+          <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="card kpi"><span class="lab">Daily average</span><span class="val">$86.08</span><span class="sub">$80.27 previous</span>
+              <div class="viz-root" data-h="30" id="sparkAvg" style="margin-top:8px"></div></div>
+            <div class="card kpi"><span class="lab">Transactions</span><span class="val">41</span><span class="sub">1.4 per day</span>
+              <div class="viz-root" data-h="30" id="sparkTxn" style="margin-top:8px"></div></div>
+            <div class="card kpi"><span class="lab">Recurring</span><span class="val">$1,608.70</span><span class="sub">4 charges · 62% of spend</span>
+              <div class="meter" style="margin-top:14px; height:6px"><i style="width:62%"></i></div></div>
+          </div>
+          <div class="card" style="padding:0">
+            <div class="card-hd row" style="padding-bottom:12px; align-items:flex-start">
+              <div><h2 class="card-ttl">Where it went</h2>
+                <div class="card-sub">One series, one color — length carries the value.</div></div>
+              <button class="btn btn-sm push">All categories →</button>
+            </div>
+            <div class="card-bd" style="padding-top:0"><div class="viz-root" id="catBars"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid g12">
+        <div class="card" style="grid-column:span 7">
+          <div class="card-hd row" style="align-items:flex-start">
+            <div><h2 class="card-ttl">Cumulative variable spending</h2>
+              <div class="card-sub">Rent and recurring charges excluded — they flatten the line.</div></div>
+            <div class="seg push"><button aria-pressed="true">Cumulative</button><button>Daily</button></div>
+          </div>
+          <div class="card-bd">
+            <div class="row" style="margin:6px 0 8px">
+              <div class="legend">
+                <span class="k"><i style="background:var(--s1)"></i>This period</span>
+                <span class="k"><i style="background:var(--s2)"></i>Previous period</span>
+              </div>
+              <button class="chip push" style="font-size:11.5px; padding:3px 10px">Include recurring</button>
+            </div>
+            <div class="viz-root" id="trend"></div>
+          </div>
+        </div>
+
+        <div class="card" style="grid-column:span 5">
+          <div class="card-hd row" style="align-items:flex-start">
+            <div><h2 class="card-ttl">Category budgets</h2>
+              <div class="card-sub">Spent against your monthly cap.</div></div>
+            <button class="btn btn-sm push">Edit caps</button>
+          </div>
+          <div class="card-bd" id="budgets" style="padding-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="overflow:hidden">
+        <div class="card-hd row" style="padding-bottom:16px; align-items:flex-start">
+          <div><h2 class="card-ttl">Expenses</h2><div class="card-sub">41 transactions in this range</div></div>
+          <div class="push row gap-2"><button class="btn btn-sm">Date ↓</button><button class="btn btn-sm">Columns</button></div>
+        </div>
+        <div class="qadd">
+          <form onsubmit="return false">
+            <input class="field" placeholder="Description" />
+            <input class="field tnum" placeholder="0.00" inputmode="decimal" style="text-align:right" />
+            <select class="field" id="qaCat"></select>
+            <input class="field" type="date" value="2026-08-07" />
+            <button class="btn btn-primary" style="justify-content:center">Add</button>
+          </form>
+        </div>
+        <table class="tbl">
+          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th><th style="width:130px"></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="row" style="padding:12px 20px; border-top:1px solid var(--hair); font-size:13px">
+          <span class="muted">Showing 12 of 41</span>
+          <div class="push row gap-3"><span class="ink2">Range total</span><b class="tnum" id="tblTotal"></b></div>
+        </div>
+      </div>
+
+      <details class="twin card" style="padding:16px 20px">
+        <summary>Chart data as a table</summary>
+        <div id="twin" style="margin-top:12px; max-height:240px; overflow:auto"></div>
+      </details>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  const D = window.DEMO;
+  const cs = getComputedStyle(document.documentElement);
+  const S1 = cs.getPropertyValue("--s1").trim(), S2 = cs.getPropertyValue("--s2").trim();
+
+  document.getElementById("heroTotal").textContent = D.money(D.total);
+  const dEl = document.getElementById("heroDelta");
+  dEl.className = "delta " + (D.delta > 0 ? "up" : "down");
+  dEl.textContent = (D.delta > 0 ? "▲ " : "▼ ") + Math.abs(D.delta * 100).toFixed(1) + "%";
+  const pct = D.total / D.budget;
+  document.getElementById("budgetPct").textContent = Math.round(pct * 100) + "%";
+  document.getElementById("budgetOf").textContent = "of " + D.money0(D.budget);
+  document.getElementById("budgetBar").style.width = Math.min(100, pct * 100) + "%";
+  document.getElementById("sideBar").style.width = Math.min(100, pct * 100) + "%";
+  document.getElementById("sideTxt").textContent = D.money0(D.budget - D.total) + " left of " + D.money0(D.budget);
+  document.getElementById("tblTotal").textContent = D.money(D.total);
+
+  document.getElementById("chips").innerHTML =
+    '<button class="chip" aria-pressed="true">All</button>' +
+    D.CATEGORIES.map(c => `<button class="chip">${c}</button>`).join("");
+  document.getElementById("qaCat").innerHTML = D.CATEGORIES.map(c => `<option>${c}</option>`).join("");
+
+  document.getElementById("budgets").innerHTML = D.categories.map(c => {
+    const p = c.spent / c.budget, over = p > 1, near = !over && p > 0.9;
+    const fill = over ? "var(--crit)" : near ? "var(--warn)" : "var(--s1)";
+    const track = over ? "rgba(208,59,59,.22)" : near ? "rgba(250,178,25,.20)" : "var(--track)";
+    const icon = over
+      ? `<svg width="13" height="13" viewBox="0 0 16 16" fill="var(--crit)" style="vertical-align:-2px"><circle cx="8" cy="8" r="7"/><path d="M8 4.4v5M8 11v1" stroke="#14171f" stroke-width="1.8" stroke-linecap="round"/></svg> ` : "";
+    return `<div class="budgetrow">
+      <div class="bmeta"><span style="font-weight:500">${icon}${c.name}</span>
+        <span class="tnum ink2">${D.money(c.spent)} <span class="muted">/ ${D.money0(c.budget)}</span></span></div>
+      <div class="meter" style="margin-top:6px; background:${track}"><i style="width:${Math.min(100, p * 100)}%; background:${fill}"></i></div>
+      <div style="margin-top:4px; font-size:11.5px; color:${over ? "var(--crit-fg)" : "var(--muted)"}">
+        ${over ? `Over by ${D.money(c.spent - c.budget)}` : `${D.money(c.budget - c.spent)} left · ${c.txns} transaction${c.txns > 1 ? "s" : ""}`}</div>
+    </div>`;
+  }).join("");
+
+  const dot = { Food:"#3987e5", Transport:"#d95926", Rent:"#199e70", Utilities:"#c98500", Health:"#d55181" };
+  document.getElementById("rows").innerHTML = D.expenses.map(e => `
+    <tr>
+      <td class="ink2 tnum" style="white-space:nowrap">${e.date}</td>
+      <td><span style="font-weight:500">${e.description}</span>${e.recurring ? ' <span class="tag">Recurring</span>' : ""}</td>
+      <td class="ink2"><span class="cdot" style="background:${dot[e.category]}"></span> ${e.category}</td>
+      <td class="num" style="font-weight:500">${D.money(e.amount)}</td>
+      <td style="text-align:right"><span class="rowacts">
+        <button class="btn btn-sm">Edit</button>
+        <button class="btn btn-sm" style="color:var(--crit-fg)">Delete</button></span></td>
+    </tr>`).join("");
+
+  const labels = D.days.map(d => d.slice(5).replace("-", "/"));
+  VIZ.lineChart(document.getElementById("trend"), {
+    labels, height: 236, padRight: 58,
+    series: [
+      { name: "This period", data: D.cumThisVar, color: S1, fill: true, endLabel: D.money0(D.varTotal) },
+      { name: "Previous period", data: D.cumPrevVar, color: S2, fill: false },
+    ],
+    yFmt: v => "$" + Math.round(v).toLocaleString(), yFmt2: v => D.money(v), tipTitle: i => D.days[i],
+  });
+
+  VIZ.barsH(document.getElementById("catBars"), {
+    labelW: 80, valueW: 92, rowH: 28,
+    rows: [...D.categories].sort((a, b) => b.spent - a.spent)
+      .map(c => ({ label: c.name, value: c.spent, display: D.money(c.spent), color: S1 })),
+  });
+
+  VIZ.spark(document.getElementById("sparkAvg"), D.dailyThisVar.map(v => Math.max(v, 2)), S1, true);
+  VIZ.spark(document.getElementById("heroSpark"), D.dailyThisVar.map(v => Math.max(v, 2)), S1, true);
+  VIZ.spark(document.getElementById("sparkTxn"), [1,2,0,2,1,1,3,1,0,2,2,1,0,3,1,0,2,1,1,2,1,0,1,2,1,1,2,0,1,2], S1, true);
+
+  document.getElementById("twin").innerHTML = `<table class="tbl tnum" style="font-size:12px">
+    <thead><tr><th style="padding-left:0">Day</th><th class="num">This period (cum.)</th><th class="num" style="padding-right:0">Previous (cum.)</th></tr></thead>
+    <tbody>${D.days.map((d, i) => `<tr><td style="padding-left:0">${d}</td><td class="num">${D.money(D.cumThisVar[i])}</td><td class="num" style="padding-right:0">${D.money(D.cumPrevVar[i])}</td></tr>`).join("")}</tbody></table>`;
+})();
+</script>
+
+</body>
+</html>
